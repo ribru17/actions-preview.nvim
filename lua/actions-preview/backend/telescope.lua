@@ -93,9 +93,26 @@ function M.select(config, acts)
 
             preview = preview or { syntax = "", text = "preview not available" }
 
-            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(preview.text, "\n", true))
-            vim.api.nvim_buf_set_option(self.state.bufnr, "syntax", preview.syntax)
+            local chan = vim.api.nvim_open_term(self.state.bufnr, {})
+            local data = vim.fn.system("echo '" .. preview.text .. "' | delta --no-gitconfig")
+            entry.chan = chan
+            entry.data = data
+            if data then
+              local lines = vim.split(data, "\n", {})
+              for _, d in ipairs(lines) do
+                vim.api.nvim_chan_send(chan, d .. "\r\n")
+              end
+            end
           end)
+          if entry.chan then
+            -- TODO: Get this to work.
+            if entry.data then
+              local lines = vim.split(entry.data, "\n", {})
+              for _, d in ipairs(lines) do
+                vim.api.nvim_chan_send(entry.chan, d .. "\r\n")
+              end
+            end
+          end
         end,
       }),
       finder = finders.new_table({
